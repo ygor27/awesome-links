@@ -1,25 +1,56 @@
 import Head from 'next/head';
 import { gql, useQuery } from '@apollo/client';
+import Link from "next/link";
 
 const AllLinksQuery = gql`
-  query {
-    links {
-      id
-      title
-      url
-      description
-      imageUrl
-      category
+  query allLinksQuery($first: Int, $after: String) {
+    links(first: $first, after: $after) {
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+      edges {
+        cursor
+        node {
+          index
+          imageUrl
+          url
+          title
+          category
+          description
+          id
+        }
+      }
     }
   }
 `
 
 export default function Home() {
 
-  const { data, loading, error } = useQuery(AllLinksQuery);
+  const { data, loading, error, fetchMore } = useQuery(AllLinksQuery, {
+    variables: { first: 2}
+  });
+
+  
+
+  const loadMore = () => {
+    fetchMore({
+      variables: { after: endCursor },
+      updateQuery: (prevResult, { fetchMoreResult}) => {
+        fetchMoreResult.links.edges = [
+          ...prevResult.links.edges,
+          ...fetchMoreResult.links.edges
+        ];
+        return fetchMoreResult;
+      }
+    })
+  }
 
   if(loading) return <p>Loading</p>
   if(error) return <p>Oh no.... {error.message}</p>
+
+  const { endCursor, hasNextPage} = data.links.pageInfo;
+
   return (
     <div>
       <Head>
@@ -29,15 +60,15 @@ export default function Home() {
 
       <div className="container mx-auto max-w-5xl my-20">
         <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {data.links.map((link) => (
-            <li key={link.id} className="shadow  max-w-md  rounded">
-              <img className="shadow-sm" src={link.imageUrl} />
+          {data.links.edges.map(({ node }) => (
+            <li key={node.id} className="shadow  max-w-md  rounded">
+              <img className="shadow-sm" src={node.imageUrl} />
               <div className="p-5 flex flex-col space-y-2">
-                <p className="text-sm text-blue-500">{link.category}</p>
-                <p className="text-lg font-medium">{link.title}</p>
-                <p className="text-gray-600">{link.description}</p>
-                <a href={link.url} className="flex hover:text-blue-500">
-                  {link.url.replace(/(^\w+:|^)\/\//, '')}
+                <p className="text-sm text-blue-500">{node.category}</p>
+                <p className="text-lg font-medium">{node.title}</p>
+                <p className="text-gray-600">{node.description}</p>
+                <a href={node.url} className="flex hover:text-blue-500">
+                  {node.url.replace(/(^\w+:|^)\/\//, '')}
                   <svg
                     className="w-4 h-4 my-1"
                     fill="currentColor"
@@ -52,6 +83,11 @@ export default function Home() {
             </li>
           ))}
         </ul>
+        {hasNextPage ? (
+          <button onClick={loadMore}>More</button>
+        ) : (
+          <p>You have reached the end</p>
+        )}
       </div>
     </div>
   );

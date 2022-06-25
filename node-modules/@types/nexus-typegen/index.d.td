@@ -38,9 +38,11 @@ export interface NexusGenObjects {
     description?: string | null; // String
     id?: string | null; // String
     imageUrl?: string | null; // String
+    index?: number | null; // Int
     title?: string | null; // String
     url?: string | null; // String
   }
+  Mutation: {};
   PageInfo: { // root type
     endCursor?: string | null; // String
     hasNextPage?: boolean | null; // Boolean
@@ -79,9 +81,13 @@ export interface NexusGenFieldTypes {
     description: string | null; // String
     id: string | null; // String
     imageUrl: string | null; // String
+    index: number | null; // Int
     title: string | null; // String
     url: string | null; // String
     user: Array<NexusGenRootTypes['User'] | null> | null; // [User]
+  }
+  Mutation: { // field return type
+    createLink: NexusGenRootTypes['Link']; // Link!
   }
   PageInfo: { // field return type
     endCursor: string | null; // String
@@ -114,9 +120,13 @@ export interface NexusGenFieldTypeNames {
     description: 'String'
     id: 'String'
     imageUrl: 'String'
+    index: 'Int'
     title: 'String'
     url: 'String'
     user: 'User'
+  }
+  Mutation: { // field return type name
+    createLink: 'Link'
   }
   PageInfo: { // field return type name
     endCursor: 'String'
@@ -140,6 +150,15 @@ export interface NexusGenFieldTypeNames {
 }
 
 export interface NexusGenArgTypes {
+  Mutation: {
+    createLink: { // args
+      category: string; // String!
+      description: string; // String!
+      imageUrl: string; // String!
+      title: string; // String!
+      url: string; // String!
+    }
+  }
   Query: {
     links: { // args
       after?: string | null; // String

@@ -12,9 +12,14 @@ type Link {
   description: String
   id: String
   imageUrl: String
+  index: Int
   title: String
   url: String
   user: [User]
+}
+
+type Mutation {
+  createLink(category: String!, description: String!, imageUrl: String!, title: String!, url: String!): Link!
 }
 
 type PageInfo {
