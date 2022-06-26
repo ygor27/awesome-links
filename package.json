@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "prisma:generate": "PRISMA_CLIENT_ENGINE_TYPE=\"dataProxy\" prisma generate"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
