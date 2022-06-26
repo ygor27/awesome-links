@@ -1,23 +1,13 @@
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { gql, useMutation } from '@apollo/client';
-import toast, { Toaster } from 'react-hot-toast';
+import React from "react";
+import { useForm } from "react-hook-form";
+import { gql, useMutation } from "@apollo/client";
+import toast, { Toaster } from "react-hot-toast";
+import { getSession } from "@auth0/nextjs-auth0";
+import prisma from "../lib/prisma";
 
 const CreateLinkMutation = gql`
-  mutation (
-    $title: String!
-    $url: String!
-    $imageUrl: String!
-    $category: String!
-    $description: String!
-  ) {
-    createLink(
-      title: $title
-      url: $url
-      imageUrl: $imageUrl
-      category: $category
-      description: $description
-    ) {
+  mutation($title: String!, $url: String!, $imageUrl: String!, $category: String!, $description: String!) {
+    createLink(title: $title, url: $url, imageUrl: $imageUrl, category: $category, description: $description) {
       title
       url
       imageUrl
@@ -25,63 +15,66 @@ const CreateLinkMutation = gql`
       description
     }
   }
-`;
+`
 
 const Admin = () => {
-  const [createLink, { data, loading, error }] =
-    useMutation(CreateLinkMutation);
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm();
-  const uploadPhoto = async (e) => {
+    reset
+  } = useForm()
+
+  const [createLink, { loading, error }] = useMutation(CreateLinkMutation, {
+    onCompleted: () => reset()
+  })
+
+  const onSubmit = async data => {
+    const { title, url, description, category, image} = data
+    const imageUrl = `https://${NEXT_PUBLIC_AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${image[0].name}`
+    const variables = { title, url, category, description, imageUrl}
+    try {
+      toast.promise(createLink({variables}), {
+        loading: "Create new Link",
+        success: "Link successfully created",
+        error: "Something went wrong, Please try again"
+      })
+
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  const uploadPhoto = async e => {
     const file = e.target.files[0];
     const filename = encodeURIComponent(file.name);
     const res = await fetch(`/api/upload-image?file=${filename}`);
     const data = await res.json();
     const formData = new FormData();
 
-    Object.entries({ ...data.fields, file }).forEach(([key, value]) => {
+    // @ts-ignore
+    Object.entries({ ...data.fields, file}).forEach(([key, value]) => {
       formData.append(key, value);
-    });
+    })
 
     toast.promise(
       fetch(data.url, {
-        method: 'POST',
-        body: formData,
+        method: "POST",
+        body: formData
       }),
       {
-        loading: 'Uploading...',
-        success: 'Image successfully uploaded!🎉',
-        error: `Upload failed 😥 Please try again ${error}`,
+        loading: "Loading...",
+        success: "Image successfull uploaded",
+        error: `Upload failed, Please try agayin ${error}`
       }
-    );
-  };
-
-  const onSubmit = async (data) => {
-    const { title, url, category, description, image } = data;
-    const imageUrl = `https://my-awesome-links-bucket.s3.amazonaws.com/${image[0].name}`;
-    const variables = { title, url, category, description, imageUrl };
-    try {
-      toast.promise(createLink({ variables }), {
-        loading: 'Creating new link..',
-        success: 'Link successfully created!🎉',
-        error: `Something went wrong 😥 Please try again -  ${error}`,
-      });
-    } catch (error) {
-      console.error(error);
-    }
-  };
+    )
+  }
 
   return (
     <div className="container mx-auto max-w-md py-12">
       <Toaster />
       <h1 className="text-3xl font-medium my-5">Create a new link</h1>
-      <form
-        className="grid grid-cols-1 gap-y-6 shadow-lg p-8 rounded-lg"
-        onSubmit={handleSubmit(onSubmit)}
-      >
+      <form className="grid grid-cols-1 gap-y-6 shadow-lg p-8 rounded-lg" onSubmit={handleSubmit(onSubmit)}>
         <label className="block">
           <span className="text-gray-700">Title</span>
           <input
@@ -123,9 +116,7 @@ const Admin = () => {
           />
         </label>
         <label className="block">
-          <span className="text-gray-700">
-            Upload a .png or .jpg image (max 1MB).
-          </span>
+          <span className="text-gray-700">Upload a .png or .jpg image (max 1MB).</span>
           <input
             {...register('image', { required: true })}
             onChange={uploadPhoto}
@@ -158,7 +149,45 @@ const Admin = () => {
         </button>
       </form>
     </div>
-  );
-};
+  )
 
-export default Admin;
+}
+
+export default Admin
+
+export const getServerSideProps = async ({req, res}) => {
+  const session = getSession(req, res)
+
+  if(!session) {
+    return {
+      redirect: {
+        permanent: false,
+        destination: "/api/auth/login"
+      },
+      props: {}
+    }
+  }
+
+  const user = await prisma.user.findUnique({
+    select: {
+      email: true,
+      role: true
+    },
+    where: {
+      email: session.user.email
+    }
+  });
+
+  if( user.role !== "ADMIN") {
+    return {
+      redirect: {
+        permanent: false,
+        destination: "404"
+      },
+      props: {}
+    }
+  }
+  return {
+    props: {}
+  }
+}

@@ -28,6 +28,11 @@ const Header = () => {
         <nav className="md:ml-auto flex flex-wrap items-center text-base justify-center">
           {user ? (
             <div className="flex items-center space-x-5">
+              <Link href="/admin">
+                <a>
+                  + Create
+                </a>
+              </Link>
               <Link href="/favorites">
                 <a className="inline-flex items-center border-0 py-1 px-3 focus:outline-none hover:bg-gray-200 rounded text-base mt-4 md:mt-0">
                   My Favorites
@@ -50,7 +55,7 @@ const Header = () => {
                 Login
               </a>
             </Link>
-          )}
+          )} 
         </nav>
       </div>
     </header>
